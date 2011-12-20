@@ -3,7 +3,7 @@ package taskqueue;
 import httpclient.HttpTaskCompletedListener;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 
-import java.net.URI;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
@@ -17,6 +17,12 @@ import java.util.logging.Logger;
  */
 public class HttpTaskQueue {
 
+    public static final class HttpContentType{
+        public static final String X_WWW_FORM = "application/x-www-form-urlencoded";
+        public static final String XML = "application/xml";
+        public static final String JSON = "application/json";
+    }
+
     private Logger logger = Logger.getLogger("root");
 
     private TaskStorage taskStorage;
@@ -25,18 +31,31 @@ public class HttpTaskQueue {
     private HttpTaskResultListener resultListener;
     private boolean notifyIfFailed = false;
 
-    public HttpTaskQueue(String appID){
+    public HttpTaskQueue(String appID) {
         this.taskStorage = new TaskStorage(appID.concat(".db"));
         taskQueueThread = new HttpTaskQueueThread(taskStorage, newTaskEvent, new TaskCompletedListener());
         Executors.newSingleThreadExecutor().submit(taskQueueThread);
-        
+
+        // need shutdown hook in order to terminate all working threads properly
         Runtime.getRuntime().addShutdownHook(new ShutdownHook());
     }
 
-    public int addGetTask(String url, HttpParamsMap params, HttpHeadersMap headers, HttpCookiesMap cookies) throws Exception {
+    public int addGetTask(String url) throws Exception {
+        return addGetTask(url, null, null, null);
+    }
+
+    public int addGetTask(String url, HttpParams params) throws Exception {
+        return addGetTask(url, params, null, null);
+    }
+
+    public int addGetTask(String url, HttpParams params, HttpHeaders headers) throws Exception {
+        return addGetTask(url, params, headers, null);
+    }
+    
+    public int addGetTask(String url, HttpParams params, HttpHeaders headers, HttpCookies cookies) throws Exception {
 
         int taskID = -1;
-        HttpTask task = createHttpTask(HttpMethod.GET, url, params, headers, cookies, null);
+        HttpTask task = HttpTask.create(HttpMethod.GET, url, params, headers, cookies, null, null);
 
         taskID = taskStorage.addTask(task);
 
@@ -44,10 +63,10 @@ public class HttpTaskQueue {
         return taskID;
     }
 
-    public int addPostTask(String url, HttpParamsMap params, HttpHeadersMap headers, HttpCookiesMap cookies) throws Exception {
+    public int addPostTask(String url, HttpParams params, HttpHeaders headers, HttpCookies cookies) throws Exception {
 
         int taskID = -1;
-        HttpTask task = createHttpTask(HttpMethod.POST, url, params, headers, cookies, null);
+        HttpTask task = HttpTask.create(HttpMethod.POST, url, params, headers, cookies, null, HttpContentType.X_WWW_FORM);
 
         taskID = taskStorage.addTask(task);
 
@@ -55,9 +74,26 @@ public class HttpTaskQueue {
         return taskID;
     }
 
-    public int addPutTask(String url, Map<String, String> params, Byte[] data, Map<String, String> headers, Map<String, String> cookies) throws Exception {
+    public int addPostTask(String url, HttpParams params, HttpHeaders headers, HttpCookies cookies, byte[] data, String contentType) throws Exception {
 
-        return -1;
+        int taskID = -1;
+        HttpTask task = HttpTask.create(HttpMethod.POST, url, params, headers, cookies, data, contentType);
+
+        taskID = taskStorage.addTask(task);
+
+        newTaskEvent.signal();
+        return taskID;
+    }
+
+    public int addPutTask(String url, byte[] data, String contentType, HttpParams params, HttpHeaders headers, HttpCookies cookies) throws Exception {
+
+        int taskID = -1;
+        HttpTask task = HttpTask.create(HttpMethod.PUT, url, params, headers, cookies, data, contentType);
+
+        taskID = taskStorage.addTask(task);
+
+        newTaskEvent.signal();
+        return taskID;
     }
 
     public int addDeleteTask(String url, Map<String, String> params, Map<String, String> headers, Map<String, String> cookies) throws Exception {
@@ -65,40 +101,43 @@ public class HttpTaskQueue {
         return -1;
     }
 
-    public void purgeTasks(){
+    public void purgeTasks() {
         try {
             taskStorage.purge();
         } catch (Exception e) {
         }
     }
+    
+    public List<HttpTask> getPendingTasks(){
+        try {
+            return taskStorage.getPendingTasks();
+        } catch (Exception e) {
+            
+        }
+        return null;
+    }
+    
+    public List<HttpTask> getActiveTasks(){
+        try {
+            return taskStorage.getActiveTasks();
+        } catch (Exception e) {
+            
+        }
+        
+        return null;
+    }
 
-    public void shutdown(){
+    public void shutdown() {
         taskQueueThread.stop();
     }
 
-    public void addListener(HttpTaskResultListener resultListener){
+    public void addListener(HttpTaskResultListener resultListener) {
         addListener(resultListener, false);
     }
 
-    public void addListener(HttpTaskResultListener resultListener, boolean notifyIfFailed){
+    public void addListener(HttpTaskResultListener resultListener, boolean notifyIfFailed) {
         this.notifyIfFailed = notifyIfFailed;
         this.resultListener = resultListener;
-    }
-
-    private HttpTask createHttpTask(HttpMethod method, String url, HttpParamsMap params, HttpHeadersMap headers,
-                                           HttpCookiesMap cookies, byte[] data) throws Exception {
-
-        URI uri = new URI(url);
-        HttpTask task = new HttpTask();
-
-        task.setMethod(method);
-        task.setUri(uri);
-        task.setCookies(cookies);
-        task.setParams(params);
-        task.setHeaders(headers);
-        task.setData(data);
-
-        return task;
     }
 
     private class TaskCompletedListener implements HttpTaskCompletedListener {
@@ -107,9 +146,9 @@ public class HttpTaskQueue {
             logger.log(Level.INFO, String.format("Task for %s completed with status %d", task.getUri().toASCIIString(), task.getLastResult().getStatus()));
             try {
                 taskStorage.completeTask(task);
-                
-                if(resultListener != null){
-                    if(task.isSuccess() || notifyIfFailed){
+
+                if (resultListener != null) {
+                    if (task.isSuccess() || notifyIfFailed) {
                         resultListener.taskComplete(task.getLastResult());
                     }
                 }
@@ -119,9 +158,9 @@ public class HttpTaskQueue {
         }
     }
 
-    private class ShutdownHook extends Thread{
+    private class ShutdownHook extends Thread {
         @Override
-        public void run(){
+        public void run() {
             shutdown();
         }
     }

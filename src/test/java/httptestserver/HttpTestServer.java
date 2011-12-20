@@ -18,6 +18,7 @@ import java.util.concurrent.TimeUnit;
  */
 public class HttpTestServer {
 
+    ServerBootstrap bootstrap;
     private int localPort = 0;
     private TestRequestListener requestArrivedListener = new TestRequestListener();
     private CountDownLatch requestArrivedSignal;
@@ -30,7 +31,7 @@ public class HttpTestServer {
             socket.setReuseAddress(true);
             socket.close();
 
-            ServerBootstrap bootstrap = new ServerBootstrap(
+            bootstrap = new ServerBootstrap(
                     new NioServerSocketChannelFactory(
                             Executors.newSingleThreadExecutor(),
                             Executors.newSingleThreadExecutor()));
@@ -41,7 +42,7 @@ public class HttpTestServer {
 
             localPort = socket.getLocalPort();
 
-            System.out.printf("Test server started on port %d", localPort);
+            System.out.printf("Test server started on port %d\n", localPort);
         } catch (IOException e) {
 
         }
@@ -51,6 +52,10 @@ public class HttpTestServer {
         return localPort;
     }
 
+    public void stop(){
+        bootstrap.releaseExternalResources();
+    }
+
     public void registerForRequestInterception() {
         requestArrivedSignal = new CountDownLatch(1);
     }
@@ -58,16 +63,16 @@ public class HttpTestServer {
     public HttpRequest waitUntilRequestArrives() {
 
         if (requestArrivedSignal == null) {
-            throw new IllegalStateException("Register for request interception first");
+            throw new IllegalStateException("Register for request interception first\n");
         }
 
         try {
-            requestArrivedSignal.await(56, TimeUnit.SECONDS);
+            requestArrivedSignal.await(5, TimeUnit.SECONDS);
             requestArrivedSignal = null;
             return requestArrivedListener.getLastHttpRequest();
 
         } catch (InterruptedException e) {
-            System.out.print("Interrupted signal");
+            System.out.print("Interrupted signal\n");
         }
 
         return null;
@@ -79,6 +84,7 @@ public class HttpTestServer {
         public void requestArrived(HttpRequest request) {
             this.httpRequest = request;
 
+            System.out.printf("%s Request arrived for %s", request.getMethod().getName(), request.getUri());
             if (requestArrivedSignal != null) {
                 requestArrivedSignal.countDown();
             }

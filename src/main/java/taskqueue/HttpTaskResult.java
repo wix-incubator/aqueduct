@@ -13,6 +13,8 @@ public class HttpTaskResult {
     private List<Map.Entry<String, String>> headers;
     private byte [] content;
 
+    private Throwable errorCause;
+
     public int getStatus() {
         return status;
     }
@@ -35,5 +37,13 @@ public class HttpTaskResult {
 
     public void setContent(byte[] content) {
         this.content = content;
+    }
+
+    public Throwable getErrorCause() {
+        return errorCause;
+    }
+
+    public void setErrorCause(Throwable errorCause) {
+        this.errorCause = errorCause;
     }
 }

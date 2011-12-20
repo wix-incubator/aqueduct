@@ -42,7 +42,7 @@ public class TaskStorage {
         int taskID = -1;
         String json = gson.toJson(task, HttpTask.class);
 
-        if (json == null) {
+        if (null == json) {
             throw new Exception("Serialize error");
         }
 
@@ -77,7 +77,7 @@ public class TaskStorage {
         closeConnection(stmt, conn);
     }
 
-    public List<HttpTask> getPendingTasks() throws Exception {
+    public List<HttpTask> leaseTasks() throws Exception {
 
         Connection conn = dataSource.getConnection();
         PreparedStatement fetchStmt = conn.prepareStatement("select * from task_queue where leased = 0 order by id limit 4");
@@ -107,6 +107,45 @@ public class TaskStorage {
         stmt.execute();
         closeConnection(stmt, conn);
     }
+
+    public List<HttpTask> getActiveTasks() throws Exception{
+
+        Connection conn = dataSource.getConnection();
+        PreparedStatement fetchStmt = conn.prepareStatement("select * from task_queue where leased = 1");
+
+        ResultSet rs = fetchStmt.executeQuery();
+
+        ArrayList<HttpTask> taskList = new ArrayList<HttpTask>();
+        while (rs.next()) {
+            HttpTask task = gson.fromJson(rs.getString("task_json"), HttpTask.class);
+            task.setTaskID(rs.getInt("id"));
+
+            taskList.add(task);
+        }
+
+        closeConnection(rs, fetchStmt, conn);
+        return taskList;
+    }
+
+    public List<HttpTask> getPendingTasks() throws Exception{
+
+        Connection conn = dataSource.getConnection();
+        PreparedStatement fetchStmt = conn.prepareStatement("select * from task_queue");
+
+        ResultSet rs = fetchStmt.executeQuery();
+
+        ArrayList<HttpTask> taskList = new ArrayList<HttpTask>();
+        while (rs.next()) {
+            HttpTask task = gson.fromJson(rs.getString("task_json"), HttpTask.class);
+            task.setTaskID(rs.getInt("id"));
+
+            taskList.add(task);
+        }
+
+        closeConnection(rs, fetchStmt, conn);
+        return taskList;
+    }
+
 
     private void initDB(String dbFileName) throws SQLException {
         dataSource = new SQLiteDataSource(dbFileName);

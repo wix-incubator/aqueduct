@@ -16,7 +16,7 @@ import java.util.logging.Logger;
  * Time: 17:11
  */
 
-public class HttpTaskQueueThread implements Runnable{
+class HttpTaskQueueThread implements Runnable{
 
     private Logger logger = Logger.getLogger("root");
 
@@ -41,11 +41,11 @@ public class HttpTaskQueueThread implements Runnable{
             try {
                 doTasks();
 
-                logger.log(Level.INFO, "Entering newTaskEvent, waiting wor signal...");
+                logger.info("Entering newTaskEvent, waiting wor signal...");
                 newTaskEvent.waitSignalWithTimeout(5, TimeUnit.SECONDS);
 
             } catch (InterruptedException e) {
-                logger.log(Level.INFO, "Task thread interrupted");
+                logger.info("Task thread interrupted");
                 httpClient.shutdown();
             }
         }
@@ -59,10 +59,10 @@ public class HttpTaskQueueThread implements Runnable{
 
     private void doTasks(){
 
-        logger.log(Level.INFO, "Start dispatching HTTP tasks...");
+        logger.info("Start dispatching HTTP tasks...");
 
         try {
-            List<HttpTask> taskList = taskStorage.getPendingTasks();
+            List<HttpTask> taskList = taskStorage.leaseTasks();
 
             logger.info(String.format("Got %d tasks to do...", taskList.size()));
             for(HttpTask task : taskList){
@@ -70,7 +70,7 @@ public class HttpTaskQueueThread implements Runnable{
             }
 
         } catch (Exception e) {
-            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+            logger.severe("Error dispatching tasks - " + e.getMessage());
         }
     }
 

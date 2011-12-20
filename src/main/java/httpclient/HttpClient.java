@@ -1,6 +1,7 @@
 package httpclient;
 
 import java.net.InetSocketAddress;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -8,16 +9,15 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
+import org.jboss.netty.buffer.ChannelBuffers;
 import org.jboss.netty.channel.Channel;
 import org.jboss.netty.channel.ChannelFuture;
 import org.jboss.netty.channel.ChannelFutureListener;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
-import org.jboss.netty.handler.codec.http.CookieEncoder;
-import org.jboss.netty.handler.codec.http.DefaultHttpRequest;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import org.jboss.netty.handler.codec.http.HttpRequest;
-import org.jboss.netty.handler.codec.http.HttpVersion;
+import org.jboss.netty.handler.codec.http.*;
 import taskqueue.HttpTask;
+import taskqueue.HttpTaskQueue;
+import taskqueue.HttpTaskResult;
 
 /**
  * @author evg
@@ -43,21 +43,6 @@ public class HttpClient {
         bootstrap.setPipelineFactory(new HttpClientPipelineFactory(new ResponseFinalizer()));
     }
 
-    public void send(HttpTask task) throws Exception {
-
-        String host = task.getUri().getHost();
-        int port = task.getUri().getPort();
-
-        if (-1 == port) port = 80;
-
-        logger.log(Level.INFO, "Start performing request to " + task.getUri().toASCIIString());
-        // Start the connection attempt.
-        ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
-
-        activeChannels.put(future.getChannel().getId(), future.getChannel());
-        future.addListener(new HttpTaskExecutor(task));
-    }
-
     public void shutdown() {
 
         for (Channel channel : activeChannels.values()) {
@@ -66,6 +51,25 @@ public class HttpClient {
         activeChannels.clear();
 
         bootstrap.releaseExternalResources();
+    }
+
+
+    public void send(HttpTask task) throws Exception {
+
+        String host = task.getUri().getHost();
+        int port = task.getUri().getPort();
+
+        if (-1 == port) port = 80;
+
+        logger.info("Start performing request to " + task.getUri().toASCIIString());
+        // Start the connection attempt.
+        ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
+
+        Channel channel = future.getChannel();
+        channel.getPipeline().getContext("handler").setAttachment(task);
+
+        activeChannels.put(channel.getId(), channel);
+        future.addListener(new HttpTaskExecutor(task));
     }
 
     private class HttpTaskExecutor implements ChannelFutureListener {
@@ -83,9 +87,14 @@ public class HttpClient {
             Channel channel = future.getChannel();
             if (!future.isSuccess()) {
 
-                logger.log(Level.WARNING, "Failed to connect to " + host);
+                logger.severe("Failed to connect to " + host);
                 task.setSuccess(false);
                 task.setLastError(future.getCause());
+
+                HttpTaskResult result = new HttpTaskResult();
+                result.setErrorCause(future.getCause());
+                task.addResult(result);
+
                 taskFinished(task, channel);
                 return;
             }
@@ -98,23 +107,16 @@ public class HttpClient {
             request.setHeader(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
 
             if (task.getHeaders() != null && (!task.getHeaders().isEmpty())) {
-                for (Map.Entry<String, String> entry : task.getHeaders().entrySet()) {
-                    request.setHeader(entry.getKey(), entry.getValue());
+                for (Map.Entry<String, List<String>> entry : task.getHeaders().entrySet()) {
+                    for (String headerValue : entry.getValue()) {
+                        request.setHeader(entry.getKey(), headerValue);
+                    }
                 }
             }
 
-            if (task.getCookies() != null && (!task.getCookies().isEmpty())) {
-                CookieEncoder httpCookieEncoder = new CookieEncoder(false);
-                for (Map.Entry<String, String> entry : task.getCookies().entrySet()) {
-                    httpCookieEncoder.addCookie(entry.getKey(), entry.getValue());
-                }
-
-                request.setHeader(HttpHeaders.Names.COOKIE, httpCookieEncoder.encode());
+            if (null != task.getData()) {
+                request.setContent(ChannelBuffers.wrappedBuffer(task.getData()));
             }
-
-
-
-            channel.getPipeline().getContext("handler").setAttachment(task);
 
             // Send the HTTP request.
             channel.write(request);
@@ -126,6 +128,7 @@ public class HttpClient {
     private void taskFinished(HttpTask task, Channel channel) {
 
         activeChannels.remove(channel.getId());
+        channel.close();
         taskCompletedListener.taskCompleted(task);
     }
 

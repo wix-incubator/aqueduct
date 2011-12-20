@@ -1,48 +1,77 @@
 package taskqueue;
 
+import httptestserver.HttpTestServer;
 import org.junit.Before;
-import taskqueue.HttpTaskQueue;
+import org.junit.After;
+
+import utils.DefaultTaskQueueResultListener;
 
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import static org.junit.Assert.*;
+
 /**
-  * User: evg
+ * User: evg
  * Date: 23/11/11
  * Time: 17:59
  */
 
 
-public class HTTPTaskQueueTest {
+public class HttpTaskQueueTest {
+    HttpTaskQueue taskQueue;
+    HttpTestServer testServer;
+    int serverLocalPort = 0;
 
     @Before
-    public void setup(){
+    public void setup() {
 
         Logger logger = Logger.getLogger("root");
-		logger.setLevel(Level.ALL);
+        logger.setLevel(Level.ALL);
 
         ConsoleHandler handler = new ConsoleHandler();
         logger.addHandler(handler);
 
+        testServer = new HttpTestServer();
+        testServer.start();
+
+        serverLocalPort = testServer.getLocalPort();
+
+        taskQueue = new HttpTaskQueue("test");
+        taskQueue.purgeTasks();
+    }
+
+    @After
+    public void tearDown(){
+        testServer.stop();
     }
 
     @org.junit.Test
-    public void testAddGetTask(){
+    public void testAddGetTaskSuccess() throws Exception {
 
-        try {
-            HttpTaskQueue taskQueue = new HttpTaskQueue("test");
-            taskQueue.purgeTasks();
+        DefaultTaskQueueResultListener resultListener = new DefaultTaskQueueResultListener();
+        taskQueue.addListener(resultListener, true);
 
-            taskQueue.addGetTask("http://www.google.co.il", null, null,null);
+        String url = String.format("http://localhost:%d/test", serverLocalPort);
+        taskQueue.addGetTask(url);
 
-            Thread.sleep(10000);
+        assertEquals(200, resultListener.getTaskResult().getStatus());
 
-            taskQueue.addGetTask("http://noc.co.il", null, null,null);
-            Thread.sleep(10000);
+        assertEquals(0, taskQueue.getPendingTasks().size());
+    }
 
-        } catch (Exception e) {
-            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
-        }
+    @org.junit.Test
+    public void testAddGetTaskFailedServerBadPort() throws Exception {
+
+        DefaultTaskQueueResultListener resultListener = new DefaultTaskQueueResultListener();
+        taskQueue.addListener(resultListener, true);
+
+        String url = String.format("http://localhost:%d/test", 1);
+        int taskId = taskQueue.addGetTask(url);
+
+        assertEquals(0, resultListener.getTaskResult().getStatus());
+        
+        assertEquals(taskId, taskQueue.getPendingTasks().get(0).getTaskID());
     }
 }

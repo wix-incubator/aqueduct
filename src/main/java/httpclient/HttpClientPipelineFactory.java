@@ -17,7 +17,7 @@ import org.jboss.netty.handler.codec.http.HttpClientCodec;
    * @version $Rev: 2226 $, $Date: 2010-03-31 11:26:51 +0900 (Wed, 31 Mar 2010) $
    */
 
-  public class HttpClientPipelineFactory implements ChannelPipelineFactory {
+  class HttpClientPipelineFactory implements ChannelPipelineFactory {
       private HttpResponseCompletedListener responseCompletedListener;
 
       public HttpClientPipelineFactory(HttpResponseCompletedListener responseCompletedListener) {

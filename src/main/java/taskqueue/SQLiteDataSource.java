@@ -17,7 +17,7 @@ import java.util.logging.Logger;
 
 import javax.sql.DataSource;
 
-public class SQLiteDataSource implements DataSource {
+class SQLiteDataSource implements DataSource {
 
     private Logger logger = Logger.getLogger("root");
     private final String jdbcPrefix = "jdbc:sqlite:";
