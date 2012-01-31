@@ -1,4 +1,4 @@
-package taskqueue;
+package task;
 
 import java.util.*;
 
@@ -29,7 +29,7 @@ public class HttpHeaders extends HashMap<String, List<String>> {
         HttpCodecUtil.validateHeaderValue(value);
 
         if(!this.containsKey(name)){
-            List<String> values = new LinkedList<String>();
+            List<String> values = new ArrayList<String>();
             values.add(value);
             this.put(name, values);
         } else{
@@ -37,5 +37,13 @@ public class HttpHeaders extends HashMap<String, List<String>> {
         }
 
         return this;
+    }
+
+    public String getFirstHeader(String name){
+
+        if (containsKey(name))
+            return get(name).get(0);
+        else
+            return "";
     }
 }

@@ -1,6 +1,6 @@
 package utils;
 
-import taskqueue.HttpTaskResult;
+import task.HttpTask;
 import taskqueue.HttpTaskResultListener;
 
 import java.util.concurrent.CountDownLatch;
@@ -11,27 +11,32 @@ import java.util.concurrent.TimeUnit;
  * Date: 18/12/11
  * Time: 11:49
  */
-public class DefaultTaskQueueResultListener implements HttpTaskResultListener{
+public class DefaultTaskQueueResultListener implements HttpTaskResultListener {
     
-    HttpTaskResult taskResult;
+    HttpTask taskResult;
     CountDownLatch resultSignal;
     long timeout = 5;
-    
+
+
     public DefaultTaskQueueResultListener(){
-        this(5);
+        this(5, TimeUnit.SECONDS);
+    }
+
+      public DefaultTaskQueueResultListener(long timeout, TimeUnit timeUnit){
+        this(timeout, timeUnit, 1);
     }
     
-    public DefaultTaskQueueResultListener(long timeout){
-        this.timeout = timeout;
-        resultSignal = new CountDownLatch(1);
+    public DefaultTaskQueueResultListener(long timeout, TimeUnit timeUnit, int retryCount){
+        this.timeout = timeUnit.toMillis(timeout);
+        resultSignal = new CountDownLatch(retryCount);
     }
     
-    public HttpTaskResult getTaskResult() throws InterruptedException {
-        resultSignal.await(timeout, TimeUnit.SECONDS);
+    public HttpTask getTask() throws InterruptedException {
+        resultSignal.await(timeout, TimeUnit.MILLISECONDS);
         return taskResult;
     }
-    
-    public void taskComplete(HttpTaskResult result) {
+
+    public void taskComplete(HttpTask result) {
         taskResult = result;
         resultSignal.countDown();
     }

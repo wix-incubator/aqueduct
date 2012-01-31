@@ -39,7 +39,7 @@ public class HttpTestServerResponseHandler extends SimpleChannelUpstreamHandler 
         // Call testing callback
         if(requestArrivedListener != null) requestArrivedListener.requestArrived(request);
 
-        HttpResponse response = new DefaultHttpResponse(HTTP_1_1, OK);
+        HttpResponse response = new DefaultHttpResponse(HTTP_1_0, getTestStatus(request));
 
         response.setContent(ChannelBuffers.copiedBuffer("ok".getBytes()));
         setContentLength(response, 2);
@@ -82,6 +82,14 @@ public class HttpTestServerResponseHandler extends SimpleChannelUpstreamHandler 
 
         // Close the connection as soon as the error message is sent.
         ctx.getChannel().write(response).addListener(ChannelFutureListener.CLOSE);
+    }
+
+    private HttpResponseStatus getTestStatus(HttpRequest request){
+        if(request.containsHeader("Test-Status")){
+            return HttpResponseStatus.valueOf(Integer.parseInt(request.getHeader("Test-Status")));
+        }
+
+        return OK;
     }
 
 }

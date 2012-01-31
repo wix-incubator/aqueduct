@@ -22,6 +22,7 @@ public class HttpTestServer {
     private int localPort = 0;
     private TestRequestListener requestArrivedListener = new TestRequestListener();
     private CountDownLatch requestArrivedSignal;
+    private String localUrl;
 
 
     public void start() {
@@ -41,10 +42,11 @@ public class HttpTestServer {
             bootstrap.bind(socket.getLocalSocketAddress());
 
             localPort = socket.getLocalPort();
+            localUrl = String.format("http://localhost:%d/", localPort);
 
             System.out.printf("Test server started on port %d\n", localPort);
         } catch (IOException e) {
-
+            System.out.printf("IO Error: %s", e.toString());
         }
     }
 
@@ -52,22 +54,34 @@ public class HttpTestServer {
         return localPort;
     }
 
+    public String getLocalUrl(){
+        return localUrl;
+    }
+
     public void stop(){
         bootstrap.releaseExternalResources();
     }
 
     public void registerForRequestInterception() {
-        requestArrivedSignal = new CountDownLatch(1);
+        registerForRequestInterception(1);
+    }
+
+    public void registerForRequestInterception(int nRequests) {
+        requestArrivedSignal = new CountDownLatch(nRequests);
     }
 
     public HttpRequest waitUntilRequestArrives() {
+        return waitUntilRequestArrives(1, TimeUnit.SECONDS);
+    }
+
+    public HttpRequest waitUntilRequestArrives(long timeout, TimeUnit timeUnit) {
 
         if (requestArrivedSignal == null) {
             throw new IllegalStateException("Register for request interception first\n");
         }
 
         try {
-            requestArrivedSignal.await(5, TimeUnit.SECONDS);
+            requestArrivedSignal.await(timeout, timeUnit);
             requestArrivedSignal = null;
             return requestArrivedListener.getLastHttpRequest();
 

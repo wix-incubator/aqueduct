@@ -1,8 +1,6 @@
-package taskqueue;
+package task;
 
 import org.jboss.netty.handler.codec.http.CookieEncoder;
-
-import java.util.HashMap;
 
 /**
  * Created by evg.

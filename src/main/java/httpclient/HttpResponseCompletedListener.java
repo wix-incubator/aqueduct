@@ -1,7 +1,7 @@
 package httpclient;
 
 import org.jboss.netty.channel.Channel;
-import taskqueue.HttpTask;
+import task.HttpTask;
 
 /**
  * Created by evg.

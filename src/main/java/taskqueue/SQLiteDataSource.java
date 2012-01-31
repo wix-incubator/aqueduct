@@ -34,7 +34,7 @@ class SQLiteDataSource implements DataSource {
             prop.setProperty("shared_cache", "true");
 
 		} catch (ClassNotFoundException e) {
-			logger.log(Level.SEVERE, "Failed to create TasqQueue data file");
+			logger.severe("Failed to create TasqQueue data file");
         }
     }
 

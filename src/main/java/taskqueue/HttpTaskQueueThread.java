@@ -1,12 +1,11 @@
 package taskqueue;
 
 import httpclient.HttpClient;
-import httpclient.HttpTaskCompletedListener;
+import task.HttpTask;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
@@ -16,7 +15,7 @@ import java.util.logging.Logger;
  * Time: 17:11
  */
 
-class HttpTaskQueueThread implements Runnable{
+class HttpTaskQueueThread implements Runnable {
 
     private Logger logger = Logger.getLogger("root");
 
@@ -26,7 +25,7 @@ class HttpTaskQueueThread implements Runnable{
     private HttpClient httpClient;
     private ManualResetEvent newTaskEvent;
 
-    public HttpTaskQueueThread(TaskStorage taskStorage, ManualResetEvent newTaskEvent, HttpTaskCompletedListener completedListener){
+    public HttpTaskQueueThread(TaskStorage taskStorage, ManualResetEvent newTaskEvent, HttpTaskResultListener completedListener) {
         this.taskStorage = taskStorage;
         this.newTaskEvent = newTaskEvent;
 
@@ -34,9 +33,9 @@ class HttpTaskQueueThread implements Runnable{
     }
 
 
-    public void run(){
+    public void run() {
 
-        while (!stopped.get()){
+        while (!stopped.get()) {
 
             try {
                 doTasks();
@@ -51,23 +50,27 @@ class HttpTaskQueueThread implements Runnable{
         }
     }
 
-    public void stop(){
+    public void stop() {
         stopped.set(true);
         newTaskEvent.signal();
         httpClient.shutdown();
     }
 
-    private void doTasks(){
+    private void doTasks() {
 
         logger.info("Start dispatching HTTP tasks...");
 
         try {
             List<HttpTask> taskList = taskStorage.leaseTasks();
 
-            logger.info(String.format("Got %d tasks to do...", taskList.size()));
-            for(HttpTask task : taskList){
-                httpClient.send(task);
+            while (!taskList.isEmpty()) {
+                logger.info(String.format("Got %d tasks to do...", taskList.size()));
+                for (HttpTask task : taskList) {
+                    httpClient.send(task);
+                }
+                taskList = taskStorage.leaseTasks();
             }
+
 
         } catch (Exception e) {
             logger.severe("Error dispatching tasks - " + e.getMessage());

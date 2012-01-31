@@ -1,7 +1,6 @@
-package taskqueue;
+package task;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * Created by evg.
@@ -10,10 +9,16 @@ import java.util.Map;
  */
 public class HttpTaskResult {
     private int status = 0;
-    private List<Map.Entry<String, String>> headers;
+    private HttpHeaders headers;
     private byte [] content;
+    private Date date;
 
-    private Throwable errorCause;
+    private String errorCause;
+
+    public HttpTaskResult(){
+        date = new Date();
+        headers = new HttpHeaders();
+    }
 
     public int getStatus() {
         return status;
@@ -23,11 +28,11 @@ public class HttpTaskResult {
         this.status = status;
     }
 
-    public List<Map.Entry<String, String>> getHeaders() {
+    public HttpHeaders getHeaders() {
         return headers;
     }
 
-    public void setHeaders(List<Map.Entry<String, String>> headers) {
+    public void setHeaders(HttpHeaders headers) {
         this.headers = headers;
     }
 
@@ -39,11 +44,16 @@ public class HttpTaskResult {
         this.content = content;
     }
 
-    public Throwable getErrorCause() {
+    public String getErrorCause() {
         return errorCause;
     }
 
     public void setErrorCause(Throwable errorCause) {
-        this.errorCause = errorCause;
+        if(null != errorCause)
+            this.errorCause = errorCause.toString();
+    }
+
+    public Date getDate() {
+        return date;
     }
 }

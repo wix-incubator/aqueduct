@@ -3,21 +3,20 @@ package httpclient;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.Channel;
-import org.jboss.netty.channel.ChannelFuture;
-import org.jboss.netty.channel.ChannelFutureListener;
+import org.jboss.netty.channel.*;
+import org.jboss.netty.channel.group.ChannelGroup;
+import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
 import org.jboss.netty.handler.codec.http.*;
-import taskqueue.HttpTask;
-import taskqueue.HttpTaskQueue;
-import taskqueue.HttpTaskResult;
+import org.jboss.netty.handler.codec.http.HttpHeaders;
+import task.HttpTask;
+import task.HttpTaskResult;
+import taskqueue.HttpTaskResultListener;
 
 /**
  * @author evg
@@ -27,29 +26,27 @@ public class HttpClient {
 
     private Logger logger = Logger.getLogger("root");
     private ClientBootstrap bootstrap;
-    private HttpTaskCompletedListener taskCompletedListener;
-    private ConcurrentHashMap<Integer, Channel> activeChannels = new ConcurrentHashMap<Integer, Channel>();
+    private HttpTaskResultListener taskCompletedListener;
+    private ChannelGroup activeChannels = new DefaultChannelGroup();
 
-    public HttpClient(HttpTaskCompletedListener taskCompletedListener) {
+    public HttpClient(HttpTaskResultListener taskCompletedListener) {
 
         this.taskCompletedListener = taskCompletedListener;
 
         // Configure the client.
+        //TODO: Make Channels ThreadPool configurable
         bootstrap = new ClientBootstrap(
                 new NioClientSocketChannelFactory(Executors.newFixedThreadPool(4), Executors.newFixedThreadPool(4))
         );
 
+        bootstrap.setOption("tcpNoDelay", true);
         // Set up the event pipeline factory.
         bootstrap.setPipelineFactory(new HttpClientPipelineFactory(new ResponseFinalizer()));
     }
 
     public void shutdown() {
 
-        for (Channel channel : activeChannels.values()) {
-            channel.close();
-        }
-        activeChannels.clear();
-
+        activeChannels.close();
         bootstrap.releaseExternalResources();
     }
 
@@ -68,11 +65,12 @@ public class HttpClient {
         Channel channel = future.getChannel();
         channel.getPipeline().getContext("handler").setAttachment(task);
 
-        activeChannels.put(channel.getId(), channel);
+        activeChannels.add(channel);
         future.addListener(new HttpTaskExecutor(task));
     }
 
     private class HttpTaskExecutor implements ChannelFutureListener {
+
         HttpTask task;
 
         public HttpTaskExecutor(HttpTask task) {
@@ -81,55 +79,72 @@ public class HttpClient {
 
         public void operationComplete(ChannelFuture future) throws Exception {
 
-            String host = task.getUri().getHost();
-
             // Wait until the connection attempt succeeds or fails.
             Channel channel = future.getChannel();
-            if (!future.isSuccess()) {
 
-                logger.severe("Failed to connect to " + host);
-                task.setSuccess(false);
-                task.setLastError(future.getCause());
+            try {
+                String host = task.getUri().getHost();
 
-                HttpTaskResult result = new HttpTaskResult();
-                result.setErrorCause(future.getCause());
-                task.addResult(result);
+                if (!future.isSuccess()) {
+                    logger.severe("Failed to connect to " + host);
+                    setFailure(channel, future.getCause());
+                    return;
+                }
 
-                taskFinished(task, channel);
-                return;
-            }
+                logger.info("Connected to " + host);
 
-            logger.info("Connected to " + host);
+                // Prepare the HTTP request.
+                HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.valueOf(task.getVerb()), task.getUri().toASCIIString());
+                request.setHeader(HttpHeaders.Names.HOST, host);
+                request.setHeader(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
 
-            // Prepare the HTTP request.
-            HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_0, task.getMethod(), task.getUri().toASCIIString());
-            request.setHeader(HttpHeaders.Names.HOST, host);
-            request.setHeader(HttpHeaders.Names.CONNECTION, HttpHeaders.Values.CLOSE);
-
-            if (task.getHeaders() != null && (!task.getHeaders().isEmpty())) {
-                for (Map.Entry<String, List<String>> entry : task.getHeaders().entrySet()) {
-                    for (String headerValue : entry.getValue()) {
-                        request.setHeader(entry.getKey(), headerValue);
+                if (task.getHeaders() != null && (!task.getHeaders().isEmpty())) {
+                    for (Map.Entry<String, List<String>> entry : task.getHeaders().entrySet()) {
+                        for (String headerValue : entry.getValue()) {
+                            request.addHeader(entry.getKey(), headerValue);
+                        }
                     }
                 }
+
+                if (null != task.getData()) {
+                    request.setContent(ChannelBuffers.wrappedBuffer(task.getData()));
+                }
+
+                // Send the HTTP request.
+                channel.write(request);
+
+                logger.info("HTTP Request sent, waiting for response from " + host);
+            } catch (Exception e) {
+                logger.severe("Failed to complete task for " + task.getUri().toASCIIString());
+                setFailure(channel, e);
             }
-
-            if (null != task.getData()) {
-                request.setContent(ChannelBuffers.wrappedBuffer(task.getData()));
-            }
-
-            // Send the HTTP request.
-            channel.write(request);
-
-            logger.info("HTTP Request sent, waiting for response from " + host);
         }
+
+        public void setFailure(Channel channel, Throwable e) throws Exception {
+
+            if (null != task) {
+                task.setSuccess(false);
+
+                HttpTaskResult result = new HttpTaskResult();
+                result.setErrorCause(e.getCause());
+                task.addResult(result);
+            }
+
+            taskFinished(task, channel);
+        }
+
+
     }
 
     private void taskFinished(HttpTask task, Channel channel) {
 
-        activeChannels.remove(channel.getId());
-        channel.close();
-        taskCompletedListener.taskCompleted(task);
+        try {
+            channel.close();
+        } finally {
+            if (null != taskCompletedListener) {
+                taskCompletedListener.taskComplete(task);
+            }
+        }
     }
 
     private class ResponseFinalizer implements HttpResponseCompletedListener {

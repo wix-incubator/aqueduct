@@ -1,13 +1,14 @@
 package taskqueue;
 
-import httpclient.HttpTaskCompletedListener;
-import org.jboss.netty.handler.codec.http.HttpMethod;
+import task.HttpTask;
+import task.HttpTaskFactory;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import static task.HttpConstants.HttpVerb;
 
 /**
  * Created by IntelliJ IDEA.
@@ -17,12 +18,7 @@ import java.util.logging.Logger;
  */
 public class HttpTaskQueue {
 
-    public static final class HttpContentType{
-        public static final String X_WWW_FORM = "application/x-www-form-urlencoded";
-        public static final String XML = "application/xml";
-        public static final String JSON = "application/json";
-    }
-
+    //TODO: Make logger pluggable into calling application logger
     private Logger logger = Logger.getLogger("root");
 
     private TaskStorage taskStorage;
@@ -31,8 +27,12 @@ public class HttpTaskQueue {
     private HttpTaskResultListener resultListener;
     private boolean notifyIfFailed = false;
 
-    public HttpTaskQueue(String appID) {
-        this.taskStorage = new TaskStorage(appID.concat(".db"));
+    public HttpTaskQueue(String appID){
+        this(appID, new DefaultTaskMarshaller());
+    }
+    
+    public HttpTaskQueue(String appID, TaskMarshaller taskMarshaller) {
+        this.taskStorage = new TaskStorage(appID.concat(".db"), taskMarshaller);
         taskQueueThread = new HttpTaskQueueThread(taskStorage, newTaskEvent, new TaskCompletedListener());
         Executors.newSingleThreadExecutor().submit(taskQueueThread);
 
@@ -40,65 +40,28 @@ public class HttpTaskQueue {
         Runtime.getRuntime().addShutdownHook(new ShutdownHook());
     }
 
-    public int addGetTask(String url) throws Exception {
-        return addGetTask(url, null, null, null);
-    }
+    public void queue(HttpTask task) throws Exception {
 
-    public int addGetTask(String url, HttpParams params) throws Exception {
-        return addGetTask(url, params, null, null);
-    }
-
-    public int addGetTask(String url, HttpParams params, HttpHeaders headers) throws Exception {
-        return addGetTask(url, params, headers, null);
+        taskStorage.addTask(task.sanitize());
+        
+        // Notify worker thread about new task 
+        newTaskEvent.signal();
     }
     
-    public int addGetTask(String url, HttpParams params, HttpHeaders headers, HttpCookies cookies) throws Exception {
-
-        int taskID = -1;
-        HttpTask task = HttpTask.create(HttpMethod.GET, url, params, headers, cookies, null, null);
-
-        taskID = taskStorage.addTask(task);
-
-        newTaskEvent.signal();
-        return taskID;
+    public HttpTask createGetTask(String url) throws Exception {
+        return HttpTaskFactory.create(HttpVerb.GET, url, true);
     }
 
-    public int addPostTask(String url, HttpParams params, HttpHeaders headers, HttpCookies cookies) throws Exception {
-
-        int taskID = -1;
-        HttpTask task = HttpTask.create(HttpMethod.POST, url, params, headers, cookies, null, HttpContentType.X_WWW_FORM);
-
-        taskID = taskStorage.addTask(task);
-
-        newTaskEvent.signal();
-        return taskID;
+    public HttpTask createPostTask(String url) throws Exception {
+        return HttpTaskFactory.create(HttpVerb.POST, url, true);
     }
 
-    public int addPostTask(String url, HttpParams params, HttpHeaders headers, HttpCookies cookies, byte[] data, String contentType) throws Exception {
-
-        int taskID = -1;
-        HttpTask task = HttpTask.create(HttpMethod.POST, url, params, headers, cookies, data, contentType);
-
-        taskID = taskStorage.addTask(task);
-
-        newTaskEvent.signal();
-        return taskID;
+    public HttpTask createPutTask(String url) throws Exception {
+        return HttpTaskFactory.create(HttpVerb.PUT, url, true);
     }
 
-    public int addPutTask(String url, byte[] data, String contentType, HttpParams params, HttpHeaders headers, HttpCookies cookies) throws Exception {
-
-        int taskID = -1;
-        HttpTask task = HttpTask.create(HttpMethod.PUT, url, params, headers, cookies, data, contentType);
-
-        taskID = taskStorage.addTask(task);
-
-        newTaskEvent.signal();
-        return taskID;
-    }
-
-    public int addDeleteTask(String url, Map<String, String> params, Map<String, String> headers, Map<String, String> cookies) throws Exception {
-
-        return -1;
+    public HttpTask createDeleteTask(String url) throws Exception {
+        return HttpTaskFactory.create(HttpVerb.DELETE, url, true);
     }
 
     public void purgeTasks() {
@@ -140,20 +103,33 @@ public class HttpTaskQueue {
         this.resultListener = resultListener;
     }
 
-    private class TaskCompletedListener implements HttpTaskCompletedListener {
+    private class TaskCompletedListener implements HttpTaskResultListener {
 
-        public void taskCompleted(HttpTask task) {
-            logger.log(Level.INFO, String.format("Task for %s completed with status %d", task.getUri().toASCIIString(), task.getLastResult().getStatus()));
+        public void taskComplete(HttpTask task) {
+            logger.info(String.format("Task (%d) for %s completed with status %d",
+                    task.getTaskID(), task.getUri().toASCIIString(), task.lastResult().getStatus()));
             try {
-                taskStorage.completeTask(task);
+                if(task.isSuccess()){
+                    taskStorage.deleteTask(task);
+                } else {
+                    task.triedOnce();
+                    if(task.getMaxRetries() == task.getRetryCount()){
+                        logger.info(String.format("Task (%d) exceeded max retry count, giving up...", task.getTaskID()));
+                        taskStorage.giveUpTask(task);
+                    } else{
+                        logger.info(String.format("Task (%d) failed, queueing for retry...", task.getTaskID()));
+                        taskStorage.saveTask(task);
+                    }
+                }
 
-                if (resultListener != null) {
+                if (null != resultListener) {
                     if (task.isSuccess() || notifyIfFailed) {
-                        resultListener.taskComplete(task.getLastResult());
+                        logger.info("Notifying listener...");
+                        resultListener.taskComplete(task);
                     }
                 }
             } catch (Exception e) {
-                e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+                logger.log(Level.SEVERE, "Error completing task", e);
             }
         }
     }

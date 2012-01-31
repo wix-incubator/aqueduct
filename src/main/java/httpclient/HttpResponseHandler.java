@@ -6,8 +6,8 @@ import org.jboss.netty.channel.ExceptionEvent;
 import org.jboss.netty.channel.MessageEvent;
 import org.jboss.netty.channel.SimpleChannelUpstreamHandler;
 import org.jboss.netty.handler.codec.http.HttpResponse;
-import taskqueue.HttpTask;
-import taskqueue.HttpTaskResult;
+import task.HttpTask;
+import task.HttpTaskResult;
 
 import java.util.*;
 
@@ -40,9 +40,7 @@ class HttpResponseHandler extends SimpleChannelUpstreamHandler {
                 task.setSuccess(true);
         }
 
-        List<Map.Entry<String, String>> headersDeepCopy = new ArrayList<Map.Entry<String, String>>(response.getHeaders());
-        Collections.copy(headersDeepCopy, response.getHeaders());
-        result.setHeaders(headersDeepCopy);
+       copyHeaders(response.getHeaders(), result);
 
         ChannelBuffer content = response.getContent();
         if (content.readable()) {
@@ -61,13 +59,21 @@ class HttpResponseHandler extends SimpleChannelUpstreamHandler {
         HttpTask task = (HttpTask) ctx.getAttachment();
         if (null != task) {
             task.setSuccess(false);
-            task.setLastError(e.getCause());
 
             HttpTaskResult result = new HttpTaskResult();
             result.setErrorCause(e.getCause());
             task.addResult(result);
 
             responseCompletedListener.responseCompleted(task, ctx.getChannel());
+        }
+    }
+
+    private void copyHeaders(List<Map.Entry<String,String>> headers, HttpTaskResult result){
+
+        if(null == headers || headers.isEmpty()) return;
+
+        for(Map.Entry<String, String> entry : headers){
+            result.getHeaders().addHeader(entry.getKey(), entry.getValue());
         }
     }
 }
