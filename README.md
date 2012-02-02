@@ -8,7 +8,7 @@ on [Netty NIO framework](http://netty.io/). Aqueduct also provides Synchronous A
 
 Creating the TaskQueue instance and results callback interface:
 
-`
+```java
 HttpTaskQueue taskQueue = new HttpTaskQueue("my_app");
 
 HttpTaskResultListener listener = new DefaultTaskQueueResultListener();
@@ -20,7 +20,7 @@ private class DefaultTaskQueueResultListener implements HttpTaskResultListener {
         // do something with completed task...
     }
 }
-`
+```
 
 appID string in the constructor will be used for name of database file. If omitted the name of data file will be taskqueue.db. It is useful where several application are running on the same server and each one has its own task queue.
 
@@ -28,7 +28,7 @@ addListener receives second parameter notifyIfFailed. If true the callback will 
 
 ## Queuing a task
 
-`
+```java
 byte [] payload = new byte[4096];
 Arrays.fill(payload, (byte) '1');
 
@@ -41,10 +41,11 @@ taskQueue.queue(
         .withSuccessResponseCodes(new int[]{409})
         .withData(payload, HttpContentType.JSON)
 );
-`
+```
 
 ## Working with Synchronous API.
-`
+
+```java
 HttpTaskPerformer taskPerformer = new HttpTaskPerformer();
 
 HttpTaskResult result = taskPerformer.perform(
@@ -55,11 +56,12 @@ HttpTaskResult result = taskPerformer.perform(
 if(200 == result.getStatus()){
     String content = new String(result.getContent());
 }
-`
+```
 
 ## HttpTestServer
 Using Test Http Server
-`
+
+```java
 public class HttpClientTest {
     HttpTestServer testServer;
     HttpTaskResultListener listener;
@@ -93,4 +95,4 @@ public class HttpClientTest {
         assertThat(r.getHeaderNames(), hasItems("h1", "h2"));
     }
 }
-`
+```
