@@ -1,17 +1,102 @@
 package taskqueue;
 
-import taskqueue.TaskStorage;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
+import task.*;
 
-import java.util.UUID;
+import java.io.File;
+import java.util.Date;
+import java.util.concurrent.TimeUnit;
+
+import static org.junit.Assert.*;
 
 /**
- * Created by IntelliJ IDEA.
- * User: evg
- * Date: 21/11/11
- * Time: 00:04
+ * Created by evg.
+ * Date: 01/02/12
+ * Time: 00:05
  */
-public class TaskStorageTest {
+public class TaskStorageTest{
 
-    private TaskStorage taskStorage = new TaskStorage(UUID.randomUUID().toString() + ".db");
+    TaskStorage taskStorage;
+    HttpTask aTask;
 
+    @Before
+    public void setup() throws Exception {
+        taskStorage = new TaskStorage("/tmp/taskqueue.db");
+
+        aTask = HttpTaskFactory.create("POST", "http://xxx.com", true)
+                .withParameters((new HttpParams().add("p1", "v1")).add("p2", "v2"))
+                .withIdentity("test_task")
+                .withData("datadata".getBytes(), HttpConstants.HttpContentType.JSON)
+                .withHeaders((new HttpHeaders()).addHeader("h1", "v1").addHeader("h1", "v2").addHeader("h2", "v3"))
+                .willExpireOn(new Date(System.currentTimeMillis() + TimeUnit.HOURS.toMillis(1)))
+                .withCookies(new HttpCookies().add("c1", "v1"))
+                .withMaxRetries(4)
+                .withSuccessResponseCodes(new int[]{11,12});
+    }
+
+    @After
+    public void tearDown() {
+        (new File("/tmp/taskqueue.db")).delete();
+    }
+
+
+    @Test
+    public void testAddTask() throws Exception {
+
+        taskStorage.addTask(aTask);
+
+        assertEquals(1, taskStorage.getPendingTasks().size());
+    }
+
+    @Test
+    public void testDeleteTask() throws Exception {
+
+        taskStorage.addTask(aTask);
+        taskStorage.deleteTask(aTask);
+
+        assertEquals(0, taskStorage.getPendingTasks().size());
+    }
+
+    @Test
+    public void testSaveTask() throws Exception {
+
+        taskStorage.addTask(aTask);
+        assertEquals(0, taskStorage.getPendingTasks().get(0).getRetryCount());
+
+        aTask.triedOnce();
+        taskStorage.saveTask(aTask);
+
+        assertEquals(1, taskStorage.getPendingTasks().get(0).getRetryCount());
+    }
+
+    public void testGiveUpTask() throws Exception {
+
+    }
+
+    @Test
+    public void testLeaseTasks() throws Exception {
+
+        taskStorage.addTask(aTask);
+
+        assertEquals(1, taskStorage.leaseTasks().size());
+        assertEquals(1, taskStorage.getActiveTasks().size());
+    }
+
+    @Test
+    public void testPurge() throws Exception {
+        taskStorage.addTask(aTask);
+        taskStorage.purge();
+
+        assertEquals(0, taskStorage.getPendingTasks().size());
+    }
+
+    public void testGetActiveTasks() throws Exception {
+
+    }
+
+    public void testGetPendingTasks() throws Exception {
+
+    }
 }

@@ -4,6 +4,7 @@ import httptestserver.HttpTestServer;
 
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Test;
 import performer.HttpTaskPerformer;
 import task.HttpParams;
 import task.HttpTaskResult;
@@ -55,7 +56,7 @@ public class HttpTaskPerformerTest {
         assertEquals(200, result.getStatus());
     }
 
-    @org.junit.Test
+    @Test
     public void testPerformMany() throws Exception {
         HttpTaskResult result = null;
 

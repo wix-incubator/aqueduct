@@ -39,9 +39,9 @@ public class HttpClient {
                 new NioClientSocketChannelFactory(Executors.newFixedThreadPool(4), Executors.newFixedThreadPool(4))
         );
 
-        bootstrap.setOption("tcpNoDelay", true);
         // Set up the event pipeline factory.
         bootstrap.setPipelineFactory(new HttpClientPipelineFactory(new ResponseFinalizer()));
+        bootstrap.setOption("tcpNoDelay", true);
     }
 
     public void shutdown() {
@@ -59,10 +59,13 @@ public class HttpClient {
         if (-1 == port) port = 80;
 
         logger.info("Start performing request to " + task.getUri().toASCIIString());
+
+
         // Start the connection attempt.
         ChannelFuture future = bootstrap.connect(new InetSocketAddress(host, port));
 
         Channel channel = future.getChannel();
+        channel.getConfig().setConnectTimeoutMillis(task.getConnectTimeoutMillis());
         channel.getPipeline().getContext("handler").setAttachment(task);
 
         activeChannels.add(channel);
@@ -126,7 +129,7 @@ public class HttpClient {
                 task.setSuccess(false);
 
                 HttpTaskResult result = new HttpTaskResult();
-                result.setErrorCause(e.getCause());
+                result.setErrorCause(e);
                 task.addResult(result);
             }
 

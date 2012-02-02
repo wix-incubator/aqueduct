@@ -9,6 +9,8 @@ import task.*;
 import taskqueue.HttpTaskResultListener;
 import utils.DefaultTaskQueueResultListener;
 
+import java.util.concurrent.TimeUnit;
+
 import static org.junit.Assert.*;
 import static org.junit.matchers.JUnitMatchers.*;
 
@@ -22,13 +24,12 @@ import static task.HttpConstants.HttpVerb;
  */
 public class HttpClientTest {
     HttpTestServer testServer;
-    HttpTaskResultListener listener;
+    DefaultTaskQueueResultListener listener = new DefaultTaskQueueResultListener();
     HttpClient client;
 
     @Before
     public void setUp() throws Exception {
 
-        listener = new DefaultTaskQueueResultListener();
         client = new HttpClient(listener);
 
         testServer = new HttpTestServer();
@@ -55,6 +56,15 @@ public class HttpClientTest {
         assertEquals(HttpVerb.GET, r.getMethod().getName());
         assertThat(r.getHeaderNames(), hasItems("h1", "h2"));
         assertEquals(task.getUri().toASCIIString(), r.getUri());
+    }
+
+    @Test
+    public void testConnectTimeout() throws Exception{
+
+        client.send(HttpTaskFactory.create(HttpVerb.GET, "http://google.com:81", false)
+                .withConnectTimeout(100, TimeUnit.MILLISECONDS));
+
+        assertThat(listener.getTask().lastResult().getErrorCause(), containsString("connection timed out"));
     }
 
     @Test

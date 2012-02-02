@@ -67,6 +67,7 @@ public class TaskStorage {
 
         closeConnection(rs, stmt, conn);
 
+        task.setTaskID(taskID);
         return taskID;
     }
 

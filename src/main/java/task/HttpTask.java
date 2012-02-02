@@ -6,6 +6,7 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 /**
  * User: evg
@@ -28,7 +29,8 @@ public class HttpTask {
     private int maxRetries = 3;
     private int retryCount = 0;
     
-    private long timeoutMillis = 5000; // 5 seconds default connection timeout
+    private int connectTimeoutMillis = 5000; // 5 seconds default connection timeout
+    private long requestTimeoutMillis = 10000; // 10 seconds overall request timeout
     private long minRetryInterval = 1000 ; // minimum interval between retries;
 
     private int[] successResponseCodes = new int[]{200};
@@ -107,6 +109,18 @@ public class HttpTask {
 
     public HttpTask withMaxRetries(int maxRetries) {
         this.maxRetries = maxRetries;
+
+        return this;
+    }
+
+    public HttpTask withConnectTimeout(int timeout, TimeUnit timeUnit){
+        this.connectTimeoutMillis = (int) timeUnit.toMillis(timeout);
+
+        return this;
+    }
+
+    public HttpTask withRequestTimeout(long timeout, TimeUnit timeUnit){
+        this.requestTimeoutMillis = timeUnit.toMillis(timeout);
 
         return this;
     }
@@ -229,5 +243,13 @@ public class HttpTask {
 
     public boolean isSanitized() {
         return isSanitized;
+    }
+
+    public int getConnectTimeoutMillis() {
+        return connectTimeoutMillis;
+    }
+
+    public long getRequestTimeoutMillis() {
+        return requestTimeoutMillis;
     }
 }
