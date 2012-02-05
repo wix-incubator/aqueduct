@@ -8,6 +8,7 @@ import java.util.concurrent.Executors;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import static logging.LogWrapper.*;
 import static task.HttpConstants.HttpVerb;
 
 /**
@@ -17,9 +18,6 @@ import static task.HttpConstants.HttpVerb;
  * Time: 16:34
  */
 public class HttpTaskQueue {
-
-    //TODO: Make logger pluggable into calling application logger
-    private Logger logger = Logger.getLogger("root");
 
     private TaskStorage taskStorage;
     private ManualResetEvent newTaskEvent = new ManualResetEvent();
@@ -38,6 +36,7 @@ public class HttpTaskQueue {
 
         // need shutdown hook in order to terminate all working threads properly
         Runtime.getRuntime().addShutdownHook(new ShutdownHook());
+
     }
 
     public void queue(HttpTask task) throws Exception {
@@ -106,30 +105,30 @@ public class HttpTaskQueue {
     private class TaskCompletedListener implements HttpTaskResultListener {
 
         public void taskComplete(HttpTask task) {
-            logger.info(String.format("Task (%d) for %s completed with status %d",
-                    task.getTaskID(), task.getUri().toASCIIString(), task.lastResult().getStatus()));
+            debug("Task (%d) for %s completed with status %d",
+                    task.getTaskID(), task.getUri().toASCIIString(), task.lastResult().getStatus());
             try {
                 if(task.isSuccess()){
                     taskStorage.deleteTask(task);
                 } else {
                     task.triedOnce();
                     if(task.getMaxRetries() == task.getRetryCount()){
-                        logger.info(String.format("Task (%d) exceeded max retry count, giving up...", task.getTaskID()));
+                        debug("Task (%d) exceeded max retry count, giving up...", task.getTaskID());
                         taskStorage.giveUpTask(task);
                     } else{
-                        logger.info(String.format("Task (%d) failed, queueing for retry...", task.getTaskID()));
+                        debug("Task (%d) failed, queueing for retry...", task.getTaskID());
                         taskStorage.saveTask(task);
                     }
                 }
 
                 if (null != resultListener) {
                     if (task.isSuccess() || notifyIfFailed) {
-                        logger.info("Notifying listener...");
+                        debug("Notifying listener...");
                         resultListener.taskComplete(task);
                     }
                 }
             } catch (Exception e) {
-                logger.log(Level.SEVERE, "Error completing task", e);
+                error("Error completing task, %s", e);
             }
         }
     }

@@ -6,7 +6,8 @@ import task.HttpTask;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.logging.Logger;
+
+import static logging.LogWrapper.*;
 
 /**
  * Created by IntelliJ IDEA.
@@ -16,8 +17,6 @@ import java.util.logging.Logger;
  */
 
 class HttpTaskQueueThread implements Runnable {
-
-    private Logger logger = Logger.getLogger("root");
 
     private AtomicBoolean stopped = new AtomicBoolean(false);
 
@@ -40,11 +39,11 @@ class HttpTaskQueueThread implements Runnable {
             try {
                 doTasks();
 
-                logger.info("Entering newTaskEvent, waiting wor signal...");
+                debug("Entering newTaskEvent, waiting wor signal...");
                 newTaskEvent.waitSignalWithTimeout(5, TimeUnit.SECONDS);
 
             } catch (InterruptedException e) {
-                logger.info("Task thread interrupted");
+                info("Task thread interrupted");
                 httpClient.shutdown();
             }
         }
@@ -58,14 +57,16 @@ class HttpTaskQueueThread implements Runnable {
 
     private void doTasks() {
 
-        logger.info("Start dispatching HTTP tasks...");
+        debug("Start dispatching HTTP tasks...");
 
         try {
             List<HttpTask> taskList = taskStorage.leaseTasks();
 
             while (!taskList.isEmpty()) {
-                logger.info(String.format("Got %d tasks to do...", taskList.size()));
+                debug("Got %d tasks to do...", taskList.size());
                 for (HttpTask task : taskList) {
+
+                    //TODO: Handle minRetryInterval here somehow
                     httpClient.send(task);
                 }
                 taskList = taskStorage.leaseTasks();
@@ -73,7 +74,7 @@ class HttpTaskQueueThread implements Runnable {
 
 
         } catch (Exception e) {
-            logger.severe("Error dispatching tasks - " + e.getMessage());
+            error("Error dispatching tasks - %s", e.getMessage());
         }
     }
 

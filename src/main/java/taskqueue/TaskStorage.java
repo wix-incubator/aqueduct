@@ -6,9 +6,8 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
+import static logging.LogWrapper.*;
 
 /**
  * Created by evg
@@ -19,7 +18,6 @@ import java.util.logging.Logger;
 
 public class TaskStorage {
 
-    private Logger logger = Logger.getLogger("root");
     private SQLiteDataSource pendingDataSource;
     private TaskMarshaller taskMarshaller;
 
@@ -39,7 +37,7 @@ public class TaskStorage {
             this.taskMarshaller = marshaller;
             initDB(dbFileName);
         } catch (SQLException e) {
-            logger.severe("Failed to initialize TaskQueue storage");
+            error("Failed to initialize TaskQueue storage");
         }
     }
 
@@ -197,7 +195,7 @@ public class TaskStorage {
 
             st.execute();
         } catch (Exception e) {
-            logger.log(Level.SEVERE, "Failed to create required table");
+            error("Failed to create required table");
         } finally {
             closeConnection(st, conn);
         }
@@ -220,6 +218,7 @@ public class TaskStorage {
                 stmt.close();
             }
         } catch (Exception e) {
+            debug("couldn't close statement, %s", e.toString());
         }
     }
 
@@ -229,6 +228,7 @@ public class TaskStorage {
                 rs.close();
             }
         } catch (SQLException e) {
+            debug("couldn't close resultset, %s", e.toString());
         }
     }
 
@@ -238,6 +238,7 @@ public class TaskStorage {
                 con.close();
             }
         } catch (Exception e) {
+            debug("couldn't close connection, %s", e.toString());
         }
     }
 }

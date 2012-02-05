@@ -4,7 +4,8 @@ import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
-import java.util.logging.Logger;
+
+import static logging.LogWrapper.*;
 
 import org.jboss.netty.bootstrap.ClientBootstrap;
 import org.jboss.netty.buffer.ChannelBuffers;
@@ -24,7 +25,6 @@ import taskqueue.HttpTaskResultListener;
 
 public class HttpClient {
 
-    private Logger logger = Logger.getLogger("root");
     private ClientBootstrap bootstrap;
     private HttpTaskResultListener taskCompletedListener;
     private ChannelGroup activeChannels = new DefaultChannelGroup();
@@ -58,7 +58,7 @@ public class HttpClient {
 
         if (-1 == port) port = 80;
 
-        logger.info("Start performing request to " + task.getUri().toASCIIString());
+        debug("Start performing request to %s", task.getUri().toASCIIString());
 
 
         // Start the connection attempt.
@@ -89,12 +89,12 @@ public class HttpClient {
                 String host = task.getUri().getHost();
 
                 if (!future.isSuccess()) {
-                    logger.severe("Failed to connect to " + host);
+                    error("Failed to connect to %s", host);
                     setFailure(channel, future.getCause());
                     return;
                 }
 
-                logger.info("Connected to " + host);
+                debug("Connected to %s", host);
 
                 // Prepare the HTTP request.
                 HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.valueOf(task.getVerb()), task.getUri().toASCIIString());
@@ -116,9 +116,9 @@ public class HttpClient {
                 // Send the HTTP request.
                 channel.write(request);
 
-                logger.info("HTTP Request sent, waiting for response from " + host);
+                debug("HTTP Request sent, waiting for response from %s", host);
             } catch (Exception e) {
-                logger.severe("Failed to complete task for " + task.getUri().toASCIIString());
+                error("Failed to complete task for %s", task.getUri().toASCIIString());
                 setFailure(channel, e);
             }
         }

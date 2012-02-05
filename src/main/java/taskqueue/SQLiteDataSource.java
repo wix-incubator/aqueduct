@@ -12,14 +12,13 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Properties;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+
+import static logging.LogWrapper.*;
 
 import javax.sql.DataSource;
 
 class SQLiteDataSource implements DataSource {
 
-    private Logger logger = Logger.getLogger("root");
     private final String jdbcPrefix = "jdbc:sqlite:";
     private String dbURL = "";
 	private PrintWriter printWriter = null;
@@ -34,7 +33,7 @@ class SQLiteDataSource implements DataSource {
             prop.setProperty("shared_cache", "true");
 
 		} catch (ClassNotFoundException e) {
-			logger.severe("Failed to create TasqQueue data file");
+			error("Failed to create TasqQueue data file");
         }
     }
 

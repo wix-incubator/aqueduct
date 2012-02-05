@@ -32,7 +32,7 @@ public class HttpTaskQueueTest {
     @Before
     public void setup() {
 
-        Logger logger = Logger.getLogger("root");
+        Logger logger = Logger.getLogger("com.wixpress.aqueduct");
         logger.setLevel(Level.ALL);
 
         ConsoleHandler handler = new ConsoleHandler();
