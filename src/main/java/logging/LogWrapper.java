@@ -18,6 +18,7 @@ public class LogWrapper {
     }
 
     public static void error(String message){
+
         logger.severe(message);
     }
 

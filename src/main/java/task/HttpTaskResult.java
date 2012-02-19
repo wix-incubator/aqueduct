@@ -9,16 +9,11 @@ import java.util.*;
  */
 public class HttpTaskResult {
     private int status = 0;
-    private HttpHeaders headers;
+    private HttpHeaders headers = new HttpHeaders();
     private byte [] content;
-    private Date date;
+    private long timestamp = System.currentTimeMillis();
 
-    private String errorCause;
-
-    public HttpTaskResult(){
-        date = new Date();
-        headers = new HttpHeaders();
-    }
+    private String errorCauseString = "";
 
     public int getStatus() {
         return status;
@@ -45,15 +40,53 @@ public class HttpTaskResult {
     }
 
     public String getErrorCause() {
-        return errorCause;
+        return errorCauseString;
     }
 
-    public void setErrorCause(Throwable errorCause) {
+    public void setCauseString(String errorCause) {
         if(null != errorCause)
-            this.errorCause = errorCause.toString();
+            this.errorCauseString = errorCause;
     }
 
-    public Date getDate() {
-        return date;
+    public void setCause(Throwable errorCause) {
+        if(null != errorCause)
+            this.errorCauseString = errorCause.toString();
+    }
+
+    public long getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(long timestamp) {
+        this.timestamp = timestamp;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof HttpTaskResult)) return false;
+
+        HttpTaskResult result = (HttpTaskResult) o;
+
+        if (status != result.status) return false;
+        if (timestamp != result.timestamp) return false;
+        if (!Arrays.equals(content, result.content)) return false;
+        if (errorCauseString != null ? !errorCauseString.equals(result.errorCauseString) : result.errorCauseString != null) return false;
+        if (headers != null ? !headers.equals(result.headers) : result.headers != null) return false;
+
+        return true;
+    }
+
+    @Override
+    public String toString() {
+        final StringBuilder sb = new StringBuilder();
+        sb.append("HttpTaskResult");
+        sb.append("{status=").append(status);
+        sb.append(", headers=").append(headers);
+        sb.append(", content=size:").append(content == null ? "null" : content.length);
+        sb.append(", ts=").append(timestamp);
+        sb.append(", errorCauseString='").append(errorCauseString).append('\'');
+        sb.append('}');
+        return sb.toString();
     }
 }

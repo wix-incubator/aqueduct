@@ -5,10 +5,13 @@ import org.junit.Before;
 import org.junit.Test;
 import task.*;
 
+
 import java.io.File;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
+import static org.hamcrest.CoreMatchers.is;
+import static utils.HttpTaskIsEqual.*;
 import static org.junit.Assert.*;
 
 /**
@@ -30,7 +33,7 @@ public class TaskStorageTest{
                 .withIdentity("test_task")
                 .withData("datadata".getBytes(), HttpConstants.HttpContentType.JSON)
                 .withHeaders((new HttpHeaders()).addHeader("h1", "v1").addHeader("h1", "v2").addHeader("h2", "v3"))
-                .willExpireOn(new Date(System.currentTimeMillis() + TimeUnit.HOURS.toMillis(1)))
+                .withTTL(5, TimeUnit.DAYS)
                 .withCookies(new HttpCookies().add("c1", "v1"))
                 .withMaxRetries(4)
                 .withSuccessResponseCodes(new int[]{11,12});
@@ -90,6 +93,18 @@ public class TaskStorageTest{
         taskStorage.purge();
 
         assertEquals(0, taskStorage.getPendingTasks().size());
+    }
+
+    @Test
+    public void testTaskMarshaling() throws Exception{
+
+        aTask.addResult(failedResult());
+        aTask.addResult(successResult());
+
+        taskStorage.addTask(aTask);
+        HttpTask theTask = taskStorage.getPendingTasks().get(0);
+
+        assertThat(theTask, is(aTask));
     }
 
     public void testGetActiveTasks() throws Exception {

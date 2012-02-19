@@ -43,16 +43,16 @@ class HttpTaskQueueThread implements Runnable {
                 newTaskEvent.waitSignalWithTimeout(5, TimeUnit.SECONDS);
 
             } catch (InterruptedException e) {
-                info("Task thread interrupted");
-                httpClient.shutdown();
+               error("Task thread interrupted");
             }
         }
+
+        httpClient.shutdown();
     }
 
     public void stop() {
         stopped.set(true);
         newTaskEvent.signal();
-        httpClient.shutdown();
     }
 
     private void doTasks() {
@@ -62,9 +62,11 @@ class HttpTaskQueueThread implements Runnable {
         try {
             List<HttpTask> taskList = taskStorage.leaseTasks();
 
-            while (!taskList.isEmpty()) {
+            while (!taskList.isEmpty() && !stopped.get()) {
                 debug("Got %d tasks to do...", taskList.size());
                 for (HttpTask task : taskList) {
+
+                    if(stopped.get()) break;
 
                     //TODO: Handle minRetryInterval here somehow
                     httpClient.send(task);

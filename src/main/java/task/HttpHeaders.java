@@ -46,4 +46,17 @@ public class HttpHeaders extends HashMap<String, List<String>> {
         else
             return "";
     }
+    
+    @Override
+    public String toString(){
+
+        final StringBuilder sb = new StringBuilder();
+        final String separator = ";";
+        
+        for(String k : this.keySet()){
+            for (String v : this.get(k)) sb.append(k).append(":").append(v).append(separator);
+        }
+        
+        return sb.toString();
+    }
 }

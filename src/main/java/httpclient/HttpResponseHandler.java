@@ -9,7 +9,9 @@ import org.jboss.netty.handler.codec.http.HttpResponse;
 import task.HttpTask;
 import task.HttpTaskResult;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
+
 
 /**
  * @author evg
@@ -61,7 +63,7 @@ class HttpResponseHandler extends SimpleChannelUpstreamHandler {
             task.setSuccess(false);
 
             HttpTaskResult result = new HttpTaskResult();
-            result.setErrorCause(e.getCause());
+            result.setCause(e.getCause());
             task.addResult(result);
 
             responseCompletedListener.responseCompleted(task, ctx.getChannel());

@@ -29,7 +29,7 @@ public class TaskStorage {
     }
 
     public TaskStorage(String dbFileName) {
-        this(dbFileName, new DefaultTaskMarshaller());
+        this(dbFileName, new HttpTask.DefaultMarshaler());
     }
 
     public TaskStorage(String dbFileName, TaskMarshaller marshaller) {
@@ -79,7 +79,7 @@ public class TaskStorage {
         closeConnection(stmt, conn);
     }
 
-    public void saveTask(HttpTask task) throws Exception{
+    public void saveTask(HttpTask task) throws Exception {
 
         Connection conn = pendingDataSource.getConnection();
         PreparedStatement stmt = conn.prepareStatement(
@@ -95,7 +95,7 @@ public class TaskStorage {
         closeConnection(stmt, conn);
     }
 
-    public void giveUpTask(HttpTask task){
+    public void giveUpTask(HttpTask task) {
     }
 
     public List<HttpTask> leaseTasks() throws Exception {
@@ -138,7 +138,7 @@ public class TaskStorage {
         closeConnection(stmt, conn);
     }
 
-    public List<HttpTask> getActiveTasks() throws Exception{
+    public List<HttpTask> getActiveTasks() throws Exception {
 
         Connection conn = pendingDataSource.getConnection();
         PreparedStatement fetchStmt = conn.prepareStatement("select * from task_queue where leased = 1");
@@ -158,7 +158,7 @@ public class TaskStorage {
         return taskList;
     }
 
-    public List<HttpTask> getPendingTasks() throws Exception{
+    public List<HttpTask> getPendingTasks() throws Exception {
 
         Connection conn = pendingDataSource.getConnection();
         PreparedStatement fetchStmt = conn.prepareStatement("select * from task_queue");

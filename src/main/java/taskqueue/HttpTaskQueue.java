@@ -26,7 +26,8 @@ public class HttpTaskQueue {
     private boolean notifyIfFailed = false;
 
     public HttpTaskQueue(String appID){
-        this(appID, new DefaultTaskMarshaller());
+        // this(appID, new DefaultTaskMarshaller());
+        this(appID, new HttpTask.DefaultMarshaler());
     }
     
     public HttpTaskQueue(String appID, TaskMarshaller taskMarshaller) {
@@ -36,7 +37,6 @@ public class HttpTaskQueue {
 
         // need shutdown hook in order to terminate all working threads properly
         Runtime.getRuntime().addShutdownHook(new ShutdownHook());
-
     }
 
     public void queue(HttpTask task) throws Exception {

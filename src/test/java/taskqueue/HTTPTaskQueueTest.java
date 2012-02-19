@@ -33,7 +33,7 @@ public class HttpTaskQueueTest {
     public void setup() {
 
         Logger logger = Logger.getLogger("com.wixpress.aqueduct");
-        logger.setLevel(Level.ALL);
+        logger.setLevel(Level.FINEST);
 
         ConsoleHandler handler = new ConsoleHandler();
         logger.addHandler(handler);
@@ -115,6 +115,7 @@ public class HttpTaskQueueTest {
                         .withHeaders((new HttpHeaders()).addHeader("Test-Status", "409"))
                         .withSuccessResponseCodes(new int[]{409})
         );
+
 
         assertTrue(resultListener.getTask().isSuccess());
     }

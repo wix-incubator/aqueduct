@@ -129,7 +129,7 @@ public class HttpClient {
                 task.setSuccess(false);
 
                 HttpTaskResult result = new HttpTaskResult();
-                result.setErrorCause(e);
+                result.setCause(e);
                 task.addResult(result);
             }
 
