@@ -10,6 +10,7 @@ import java.io.File;
 import java.util.Date;
 import java.util.concurrent.TimeUnit;
 
+import static java.lang.System.getProperty;
 import static org.hamcrest.CoreMatchers.is;
 import static utils.HttpTaskIsEqual.*;
 import static org.junit.Assert.*;
@@ -21,12 +22,15 @@ import static org.junit.Assert.*;
  */
 public class TaskStorageTest{
 
+    private static final String JAVA_IO_TMPDIR = "java.io.tmpdir";
+
     TaskStorage taskStorage;
     HttpTask aTask;
 
     @Before
     public void setup() throws Exception {
-        taskStorage = new TaskStorage("/tmp/taskqueue.db");
+
+        taskStorage = new TaskStorage(getProperty(JAVA_IO_TMPDIR) + "/taskqueue.db");
 
         aTask = HttpTaskFactory.create("POST", "http://xxx.com", true)
                 .withParameters((new HttpParams().add("p1", "v1")).add("p2", "v2"))
@@ -41,7 +45,7 @@ public class TaskStorageTest{
 
     @After
     public void tearDown() {
-        (new File("/tmp/taskqueue.db")).delete();
+        (new File(getProperty("java.io.tmpdir") + "/taskqueue.db")).delete();
     }
 
 
