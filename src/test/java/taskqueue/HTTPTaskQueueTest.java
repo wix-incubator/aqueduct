@@ -25,7 +25,8 @@ import static org.junit.Assert.*;
  */
 
 
-public class HttpTaskQueueTest {
+public class HTTPTaskQueueTest
+{
     HttpTaskQueue taskQueue;
     HttpTestServer testServer;
 
