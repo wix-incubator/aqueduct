@@ -1,5 +1,7 @@
 package task;
 
+import org.codehaus.jackson.annotate.JsonProperty;
+
 import java.util.*;
 
 /**
@@ -12,7 +14,6 @@ public class HttpTaskResult {
     private HttpHeaders headers = new HttpHeaders();
     private byte [] content;
     private long timestamp = System.currentTimeMillis();
-
     private String errorCauseString = "";
 
     public int getStatus() {
@@ -43,6 +44,7 @@ public class HttpTaskResult {
         return errorCauseString;
     }
 
+    @JsonProperty("errorCause")
     public void setCauseString(String errorCause) {
         if(null != errorCause)
             this.errorCauseString = errorCause;
