@@ -26,8 +26,8 @@ public class HttpTaskQueue {
     private boolean notifyIfFailed = false;
 
     public HttpTaskQueue(String appID){
-        // this(appID, new DefaultTaskMarshaller());
-        this(appID, new HttpTask.DefaultMarshaler());
+        this(appID, new DefaultTaskMarshaller());
+//        this(appID, new HttpTask.DefaultMarshaler());
     }
     
     public HttpTaskQueue(String appID, TaskMarshaller taskMarshaller) {

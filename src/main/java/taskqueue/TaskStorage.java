@@ -29,7 +29,7 @@ public class TaskStorage {
     }
 
     public TaskStorage(String dbFileName) {
-        this(dbFileName, new HttpTask.DefaultMarshaler());
+        this(dbFileName, new DefaultTaskMarshaller());
     }
 
     public TaskStorage(String dbFileName, TaskMarshaller marshaller) {
