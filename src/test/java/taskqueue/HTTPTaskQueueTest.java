@@ -16,6 +16,7 @@ import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import static java.lang.Thread.sleep;
 import static org.junit.Assert.*;
 
 /**
@@ -139,7 +140,7 @@ public class HTTPTaskQueueTest
                         .withSuccessResponseCodes(new int[]{409})
                         .withData(payload, HttpContentType.JSON)
         );
-
+        //sleep(1000000);
         assertTrue(resultListener.getTask().isSuccess());
     }
 
