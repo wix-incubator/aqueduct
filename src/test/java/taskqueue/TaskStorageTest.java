@@ -31,6 +31,7 @@ public class TaskStorageTest{
     public void setup() throws Exception {
 
         taskStorage = new TaskStorage(getProperty(JAVA_IO_TMPDIR) + "/taskqueue.db");
+        taskStorage.purge();
 
         aTask = HttpTaskFactory.create("POST", "http://xxx.com", true)
                 .withParameters((new HttpParams().add("p1", "v1")).add("p2", "v2"))
