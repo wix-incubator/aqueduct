@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.sql.DataSource;
+import java.io.File;
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -31,11 +32,11 @@ class SQLiteDataSource implements DataSource {
 
         try {
 			Class.forName("org.sqlite.JDBC");
-            dbURL = jdbcPrefix.concat(dbFileName);
+            dbURL = jdbcPrefix.concat(new File(System.getProperty("java.io.tmpdir"), dbFileName).toString());
             prop.setProperty("shared_cache", "true");
 
 		} catch (ClassNotFoundException e) {
-			LOGGER.error("Failed to create TasqQueue data file", e);
+			LOGGER.error("Failed to create TaskQueue data file", e);
         }
     }
 
