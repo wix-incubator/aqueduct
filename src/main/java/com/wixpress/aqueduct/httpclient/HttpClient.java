@@ -1,29 +1,34 @@
 package com.wixpress.aqueduct.httpclient;
 
+import com.wixpress.aqueduct.task.HttpTask;
+import com.wixpress.aqueduct.task.HttpTaskResult;
+import com.wixpress.aqueduct.taskqueue.HttpTaskResultListener;
+import org.jboss.netty.bootstrap.ClientBootstrap;
+import org.jboss.netty.buffer.ChannelBuffers;
+import org.jboss.netty.channel.Channel;
+import org.jboss.netty.channel.ChannelFuture;
+import org.jboss.netty.channel.ChannelFutureListener;
+import org.jboss.netty.channel.group.ChannelGroup;
+import org.jboss.netty.channel.group.DefaultChannelGroup;
+import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
+import org.jboss.netty.handler.codec.http.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
 
-import static com.wixpress.aqueduct.logging.LogWrapper.*;
-
-import org.jboss.netty.bootstrap.ClientBootstrap;
-import org.jboss.netty.buffer.ChannelBuffers;
-import org.jboss.netty.channel.*;
-import org.jboss.netty.channel.group.ChannelGroup;
-import org.jboss.netty.channel.group.DefaultChannelGroup;
-import org.jboss.netty.channel.socket.nio.NioClientSocketChannelFactory;
-import org.jboss.netty.handler.codec.http.*;
-import org.jboss.netty.handler.codec.http.HttpHeaders;
-import com.wixpress.aqueduct.task.HttpTask;
-import com.wixpress.aqueduct.task.HttpTaskResult;
-import com.wixpress.aqueduct.taskqueue.HttpTaskResultListener;
+import static java.lang.String.format;
 
 /**
  * @author evg
  */
 
 public class HttpClient {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(HttpClient.class);
 
     private ClientBootstrap bootstrap;
     private HttpTaskResultListener taskCompletedListener;
@@ -58,7 +63,7 @@ public class HttpClient {
 
         if (-1 == port) port = 80;
 
-        debug("Start performing request to %s", task.getUri().toASCIIString());
+        LOGGER.debug(format("Start performing request to %s", task.getUri().toASCIIString()));
 
 
         // Start the connection attempt.
@@ -89,12 +94,12 @@ public class HttpClient {
                 String host = task.getUri().getHost();
 
                 if (!future.isSuccess()) {
-                    error("Failed to connect to %s", host);
+                    LOGGER.error(format("Failed to connect to %s", host));
                     setFailure(channel, future.getCause());
                     return;
                 }
 
-                debug("Connected to %s", host);
+                LOGGER.debug(format("Connected to %s", host));
 
                 // Prepare the HTTP request.
                 HttpRequest request = new DefaultHttpRequest(HttpVersion.HTTP_1_0, HttpMethod.valueOf(task.getVerb()), task.getUri().toASCIIString());
@@ -116,9 +121,9 @@ public class HttpClient {
                 // Send the HTTP request.
                 channel.write(request);
 
-                debug("HTTP Request sent, waiting for response from %s", host);
+                LOGGER.debug(format("HTTP Request sent, waiting for response from %s", host));
             } catch (Exception e) {
-                error("Failed to complete task for %s", task.getUri().toASCIIString());
+                LOGGER.error(format("Failed to complete task for %s", task.getUri().toASCIIString()), e);
                 setFailure(channel, e);
             }
         }
@@ -135,8 +140,6 @@ public class HttpClient {
 
             taskFinished(task, channel);
         }
-
-
     }
 
     private void taskFinished(HttpTask task, Channel channel) {

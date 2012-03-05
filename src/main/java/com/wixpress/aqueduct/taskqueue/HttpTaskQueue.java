@@ -2,12 +2,14 @@ package com.wixpress.aqueduct.taskqueue;
 
 import com.wixpress.aqueduct.task.HttpTask;
 import com.wixpress.aqueduct.task.HttpTaskFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.List;
 import java.util.concurrent.Executors;
 
-import static com.wixpress.aqueduct.logging.LogWrapper.*;
 import static com.wixpress.aqueduct.task.HttpConstants.HttpVerb;
+import static java.lang.String.format;
 
 /**
  * Created by IntelliJ IDEA.
@@ -15,7 +17,9 @@ import static com.wixpress.aqueduct.task.HttpConstants.HttpVerb;
  * Date: 09/11/11
  * Time: 16:34
  */
-public class HttpTaskQueue {
+public class HttpTaskQueue
+{
+    private static final Logger LOGGER = LoggerFactory.getLogger(HttpTaskQueue.class);
 
     private TaskStorage taskStorage;
     private ManualResetEvent newTaskEvent = new ManualResetEvent();
@@ -103,30 +107,30 @@ public class HttpTaskQueue {
     private class TaskCompletedListener implements HttpTaskResultListener {
 
         public void taskComplete(HttpTask task) {
-            debug("Task (%d) for %s completed with status %d",
-                    task.getTaskID(), task.getUri().toASCIIString(), task.lastResult().getStatus());
+            LOGGER.debug(format("Task (%d) for %s completed with status %d",
+                    task.getTaskID(), task.getUri().toASCIIString(), task.lastResult().getStatus()));
             try {
                 if(task.isSuccess()){
                     taskStorage.deleteTask(task);
                 } else {
                     task.triedOnce();
                     if(task.getMaxRetries() == task.getRetryCount()){
-                        debug("Task (%d) exceeded max retry count, giving up...", task.getTaskID());
+                        LOGGER.debug(format("Task (%d) exceeded max retry count, giving up...", task.getTaskID()));
                         taskStorage.giveUpTask(task);
-                    } else{
-                        debug("Task (%d) failed, queueing for retry...", task.getTaskID());
+                    } else {
+                        LOGGER.debug(format("Task (%d) failed, queueing for retry...", task.getTaskID()));
                         taskStorage.saveTask(task);
                     }
                 }
 
                 if (null != resultListener) {
                     if (task.isSuccess() || notifyIfFailed) {
-                        debug("Notifying listener...");
+                        LOGGER.debug("Notifying listener...");
                         resultListener.taskComplete(task);
                     }
                 }
             } catch (Exception e) {
-                error("Error completing task, %s", e);
+                LOGGER.error(format("Error completing task (%d)", task.getTaskID()), e);
             }
         }
     }

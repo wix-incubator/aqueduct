@@ -1,22 +1,24 @@
 package com.wixpress.aqueduct.taskqueue;
 
 import com.wixpress.aqueduct.task.HttpTask;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 
-import static com.wixpress.aqueduct.logging.LogWrapper.*;
+import static java.lang.String.format;
 
 /**
  * Created by evg
  * Date: 15/11/11
  * Time: 13:34
  */
-
-
 public class TaskStorage {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(TaskStorage.class);
 
     private SQLiteDataSource pendingDataSource;
     private TaskMarshaller taskMarshaller;
@@ -37,7 +39,7 @@ public class TaskStorage {
             this.taskMarshaller = marshaller;
             initDB(dbFileName);
         } catch (SQLException e) {
-            error("Failed to initialize TaskQueue storage");
+            LOGGER.error("Failed to initialize TaskQueue storage", e);
         }
     }
 
@@ -195,7 +197,7 @@ public class TaskStorage {
 
             st.execute();
         } catch (Exception e) {
-            error("Failed to create required table");
+            LOGGER.error("Failed to create required table", e);
         } finally {
             closeConnection(st, conn);
         }
@@ -218,7 +220,7 @@ public class TaskStorage {
                 stmt.close();
             }
         } catch (Exception e) {
-            debug("couldn't close statement, %s", e.toString());
+            LOGGER.debug(format("Couldn't close statement, %s", e.toString()), e);
         }
     }
 
@@ -228,7 +230,7 @@ public class TaskStorage {
                 rs.close();
             }
         } catch (SQLException e) {
-            debug("couldn't close resultset, %s", e.toString());
+            LOGGER.debug(format("Couldn't close ResultSet, %s", e.toString()), e);
         }
     }
 
@@ -238,7 +240,7 @@ public class TaskStorage {
                 con.close();
             }
         } catch (Exception e) {
-            debug("couldn't close connection, %s", e.toString());
+            LOGGER.debug(format("Couldn't close connection, %s", e.toString()), e);
         }
     }
 }

@@ -2,12 +2,14 @@ package com.wixpress.aqueduct.taskqueue;
 
 import com.wixpress.aqueduct.httpclient.HttpClient;
 import com.wixpress.aqueduct.task.HttpTask;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static com.wixpress.aqueduct.logging.LogWrapper.*;
+import static java.lang.String.format;
 
 /**
  * Created by IntelliJ IDEA.
@@ -17,6 +19,8 @@ import static com.wixpress.aqueduct.logging.LogWrapper.*;
  */
 
 class HttpTaskQueueThread implements Runnable {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(HttpTaskQueueThread.class);
 
     private AtomicBoolean stopped = new AtomicBoolean(false);
 
@@ -39,11 +43,11 @@ class HttpTaskQueueThread implements Runnable {
             try {
                 doTasks();
 
-                debug("Entering newTaskEvent, waiting wor signal...");
+                LOGGER.debug("Entering newTaskEvent, waiting wor signal...");
                 newTaskEvent.waitSignalWithTimeout(5, TimeUnit.SECONDS);
 
             } catch (InterruptedException e) {
-               error("Task thread interrupted");
+                LOGGER.error("Task thread interrupted", e);
             }
         }
 
@@ -57,13 +61,13 @@ class HttpTaskQueueThread implements Runnable {
 
     private void doTasks() {
 
-        debug("Start dispatching HTTP tasks...");
+        LOGGER.debug("Start dispatching HTTP tasks...");
 
         try {
             List<HttpTask> taskList = taskStorage.leaseTasks();
 
             while (!taskList.isEmpty() && !stopped.get()) {
-                debug("Got %d tasks to do...", taskList.size());
+                LOGGER.debug(format("Got %d tasks to do...", taskList.size()));
                 for (HttpTask task : taskList) {
 
                     if(stopped.get()) break;
@@ -73,11 +77,8 @@ class HttpTaskQueueThread implements Runnable {
                 }
                 taskList = taskStorage.leaseTasks();
             }
-
-
         } catch (Exception e) {
-            error("Error dispatching tasks - %s", e.getMessage());
+            LOGGER.error(format("Error dispatching tasks - %s", e.getMessage()), e);
         }
     }
-
 }

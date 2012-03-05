@@ -7,17 +7,19 @@ package com.wixpress.aqueduct.taskqueue;
  * Time: 23:51
  */
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import javax.sql.DataSource;
 import java.io.PrintWriter;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Properties;
 
-import static com.wixpress.aqueduct.logging.LogWrapper.*;
-
-import javax.sql.DataSource;
-
 class SQLiteDataSource implements DataSource {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(SQLiteDataSource.class);
 
     private final String jdbcPrefix = "jdbc:sqlite:";
     private String dbURL = "";
@@ -33,7 +35,7 @@ class SQLiteDataSource implements DataSource {
             prop.setProperty("shared_cache", "true");
 
 		} catch (ClassNotFoundException e) {
-			error("Failed to create TasqQueue data file");
+			LOGGER.error("Failed to create TasqQueue data file", e);
         }
     }
 
