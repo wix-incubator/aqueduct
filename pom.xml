@@ -6,7 +6,7 @@
 
     <groupId>com.wixpress</groupId>
     <artifactId>aqueduct</artifactId>
-    <version>0.1-SNAPSHOT</version>
+    <version>0.1.3-SNAPSHOT</version>
 
     <dependencies>
 
@@ -21,6 +21,13 @@
             <artifactId>sqlite-jdbc</artifactId>
             <version>3.7.2</version>
         </dependency>
+
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+            <version>1.3.162</version>
+        </dependency>
+
 
         <!--  Gson: Java to Json conversion -->
 

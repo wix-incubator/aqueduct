@@ -28,11 +28,11 @@ class HttpTaskQueueThread implements Runnable {
     private HttpClient httpClient;
     private ManualResetEvent newTaskEvent;
 
-    public HttpTaskQueueThread(TaskStorage taskStorage, ManualResetEvent newTaskEvent, HttpTaskResultListener completedListener) {
+    public HttpTaskQueueThread(TaskStorage taskStorage, ManualResetEvent newTaskEvent, HttpClient httpClient) {
         this.taskStorage = taskStorage;
         this.newTaskEvent = newTaskEvent;
 
-        this.httpClient = new HttpClient(completedListener);
+        this.httpClient = httpClient;
     }
 
 
@@ -43,7 +43,7 @@ class HttpTaskQueueThread implements Runnable {
             try {
                 doTasks();
 
-                LOGGER.debug("Entering newTaskEvent, waiting wor signal...");
+                //LOGGER.debug("Entering newTaskEvent, waiting wor signal...");
                 newTaskEvent.waitSignalWithTimeout(5, TimeUnit.SECONDS);
 
             } catch (InterruptedException e) {
@@ -61,7 +61,7 @@ class HttpTaskQueueThread implements Runnable {
 
     private void doTasks() {
 
-        LOGGER.debug("Start dispatching HTTP tasks...");
+        // LOGGER.debug("Start dispatching HTTP tasks...");
 
         try {
             List<HttpTask> taskList = taskStorage.leaseTasks();

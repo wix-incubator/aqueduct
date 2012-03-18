@@ -101,7 +101,8 @@ public class HTTPTaskQueueTest
     }
 
     //TODO: investigate
-    @org.junit.Test @Ignore("Fails in CI")
+    @org.junit.Test
+    //@Ignore("Fails in CI")
     public void testPostTaskBigParams() throws Exception {
 
         DefaultTaskQueueResultListener resultListener = new DefaultTaskQueueResultListener();

@@ -60,7 +60,7 @@ public class HttpTaskPerformerTest {
     public void testPerformMany() throws Exception {
         HttpTaskResult result = null;
 
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 5; i++) {
             result = taskPerformer.perform(
                     taskPerformer.createGetTask("http://static.wix.com/index.html") //testServer.getLocalUrl())
             );

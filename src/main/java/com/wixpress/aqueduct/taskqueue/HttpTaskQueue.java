@@ -1,5 +1,6 @@
 package com.wixpress.aqueduct.taskqueue;
 
+import com.wixpress.aqueduct.httpclient.HttpClient;
 import com.wixpress.aqueduct.task.HttpTask;
 import com.wixpress.aqueduct.task.HttpTaskFactory;
 import org.slf4j.Logger;
@@ -23,6 +24,8 @@ public class HttpTaskQueue
 
     private TaskStorage taskStorage;
     private ManualResetEvent newTaskEvent = new ManualResetEvent();
+    private HttpClient httpClient;
+
     private HttpTaskQueueThread taskQueueThread;
     private HttpTaskResultListener resultListener;
     private boolean notifyIfFailed = false;
@@ -34,7 +37,9 @@ public class HttpTaskQueue
     
     public HttpTaskQueue(String appID, TaskMarshaller taskMarshaller) {
         this.taskStorage = new TaskStorage(appID.concat(".db"), taskMarshaller);
-        taskQueueThread = new HttpTaskQueueThread(taskStorage, newTaskEvent, new TaskCompletedListener());
+        httpClient = new HttpClient(new TaskCompletedListener());
+
+        taskQueueThread = new HttpTaskQueueThread(taskStorage, newTaskEvent, httpClient);
         Executors.newSingleThreadExecutor().submit(taskQueueThread);
 
         // need shutdown hook in order to terminate all working threads properly
@@ -114,11 +119,12 @@ public class HttpTaskQueue
                     taskStorage.deleteTask(task);
                 } else {
                     task.triedOnce();
-                    if(task.getMaxRetries() == task.getRetryCount()){
+                    if(task.getMaxRetries() <= task.getRetryCount()){
                         LOGGER.debug(format("Task (%d) exceeded max retry count, giving up...", task.getTaskID()));
                         taskStorage.giveUpTask(task);
                     } else {
-                        LOGGER.debug(format("Task (%d) failed, queueing for retry...", task.getTaskID()));
+                        LOGGER.debug(format("Task (%d) failed, queueing for retry (%d of %d)...",
+                                                    task.getTaskID(), task.getRetryCount(), task.getMaxRetries()));
                         taskStorage.saveTask(task);
                     }
                 }

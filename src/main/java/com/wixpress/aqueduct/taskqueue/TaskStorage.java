@@ -4,6 +4,7 @@ import com.wixpress.aqueduct.task.HttpTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.sql.DataSource;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -20,7 +21,9 @@ public class TaskStorage {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(TaskStorage.class);
 
-    private SQLiteDataSource pendingDataSource;
+    private String dbFilePath;
+
+    private DataSource pendingDataSource;
     private TaskMarshaller taskMarshaller;
 
     //private ObjectMapper jsonMapper = new ObjectMapper();
@@ -182,14 +185,14 @@ public class TaskStorage {
 
 
     private void initDB(String dbFileName) throws SQLException {
-        pendingDataSource = new SQLiteDataSource(dbFileName);
+        pendingDataSource = new H2DataSource(dbFileName);
 
         Connection conn = null;
         PreparedStatement st = null;
         try {
             conn = pendingDataSource.getConnection();
             st = conn.prepareStatement("create table if not exists task_queue(\n" +
-                    "id INTEGER PRIMARY KEY,\n" +
+                    "id int not null auto_increment PRIMARY KEY,\n" +
                     "task_json text,\n" +
                     "leased integer not null default 0,\n" +
                     "date_created numeric NOT NULL,\n" +

@@ -18,36 +18,33 @@ import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Properties;
 
-class SQLiteDataSource implements DataSource {
+class H2DataSource implements DataSource {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(SQLiteDataSource.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(H2DataSource.class);
 
-    private final String jdbcPrefix = "jdbc:sqlite:";
+    private final String jdbcPrefix = "jdbc:h2:";
     private String dbURL = "";
 	private PrintWriter printWriter = null;
 	private int loginTimeout = 0;
-    private Properties prop = new Properties();
 
-    public SQLiteDataSource(String dbFileName){
+    public H2DataSource(String dbFileName){
 
         try {
-			Class.forName("org.sqlite.JDBC");
+			Class.forName("org.h2.Driver");
 
             dbURL = jdbcPrefix.concat(new File(System.getProperty("java.io.tmpdir"), dbFileName).toString());
-            prop.setProperty("shared_cache", "true");
-
 		} catch (ClassNotFoundException e) {
 			LOGGER.error("Failed to create TaskQueue data file", e);
         }
     }
 
-	public SQLiteDataSource(){
+	public H2DataSource(){
         this("taskqueue.db");
 	}
 
 	public Connection getConnection() throws SQLException {
 
-		Connection conn = DriverManager.getConnection(dbURL, prop);
+		Connection conn = DriverManager.getConnection(dbURL, "", "");
 		//conn.setTransactionIsolation(Connection.TRANSACTION_READ_UNCOMMITTED);
 		conn.setAutoCommit(true);
 
